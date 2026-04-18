@@ -38,19 +38,54 @@ penn_model_data <- penn_model_data %>%
 # Building Model
 ```{r}
 # 3. Fit the Negative Binomial Regression Model
-model <- glm.nb(tot12 ~ Treat + width + speed + shoulder + offset(log_exposure), 
+init_model <- glm.nb(tot12 ~ Treat + width + speed + shoulder + offset(log_exposure), 
                 data = penn_model_data)
 
 # 4. View the results
-summary(model)
+summary(init_model)
 ```
 
 # Model Diagnostics
 ```{r}
 # Check for multicollinearity (ensure your predictors aren't redundant)
-car::vif(model)
+car::vif(init_model)
 
 # Check residuals to see if the model fit the data well
-plot(model)
+plot(init_model)
+```
+# stepwise selection
+```{r}
+# 1. Define the full model with all relevant predictors
+# We exclude 'driveways' and 'intersections' if they have too many NAs
+# and focus on the structural predictors identified in your assignment.
+full_model <- glm.nb(tot12 ~ Treat + width + speed + shoulder + curvature + 
+                     offset(log_exposure), 
+                     data = penn_model_data)
+
+# 2. Run AIC-based stepwise selection
+stepwise_model <- step(full_model, direction = "both")
+
+# 3. View the final, optimized model
+summary(stepwise_model)
+```
+Our initial multivariate Negative Binomial model showed no statistically significant relationship between rumble strip installation and crash frequency (p=0.48). Subsequent AIC-based stepwise selection confirmed this finding, as the removal of the treatment variable resulted in a more parsimonious model (lower AIC). Instead, roadway geometry variables—specifically pavement width, shoulder width, and horizontal curvature—emerged as the primary drivers of crash outcomes. These results suggest that in the context of the Pennsylvania road segments studied, structural roadway improvements may have a greater impact on safety than the installation of rumble strips.
+
+# Testing Interactions
+
+```{r}
+interaction_model <- glm.nb(tot12 ~ Treat * curvature + width + speed + shoulder + offset(log_exposure), 
+                            data = penn_model_data)
+
+summary(interaction_model)
 ```
 
+```{r}
+# Create a model with all possible interactions between Treat and covariates
+complex_model <- glm.nb(tot12 ~ Treat * (width + speed + shoulder + curvature) + offset(log_exposure), 
+                        data = penn_model_data)
+
+# Simplify using AIC
+final_interaction_model <- step(complex_model, direction = "both")
+```
+
+To thoroughly investigate whether the efficacy of rumble strips was conditional on roadway geometry, we fitted a complex model including all first-order interactions between the treatment indicator and road characteristics (width, speed, shoulder, curvature). We then employed an automated AIC-based stepwise selection procedure to eliminate non-informative predictors. Throughout this iterative process, all interaction terms were discarded due to a lack of statistical significance and negative impacts on model parsimony. Ultimately, the stepwise procedure again identified the treatment indicator itself as redundant. These findings consistently indicate that, within this dataset, rumble strips were not associated with reduced crash frequency, either as a main effect or through conditional interaction with roadway geometry.
