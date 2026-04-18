@@ -50,7 +50,7 @@ ggplot(crash_summary, aes(x = factor(year), y = mean_crashes, color = Treat, gro
        color = "Group") +
   theme_minimal()
 ```
-
+Prior to treatment (2004–2008), the trends are broadly similar, providing visual support for the parallel trends assumption. After 2008, treated sites exhibit a larger decline in crashes compared to untreated sites, suggesting a potential effect of rumble strip installation. However, this visual difference should be interpreted cautiously, as it does not account for differences in traffic exposure or roadway characteristics. We must consult regression results to see if the estimated treatment effect is not statistically significant.
 
 # Crash Rates
 ```{r}
@@ -113,3 +113,7 @@ penn_crash %>%
   theme_minimal()
 ```
 The exploratory distribution of crash counts (Figure X) exhibited significant right-skewness and overdispersion, characterized by a large proportion of zeros and a long tail of high-crash outliers. This distribution necessitates the use of a Generalized Linear Model (specifically a Negative Binomial regression) rather than OLS, as the latter would fail to account for the discrete nature and overdispersion of the crash counts.
+
+# parallel trends
+
+
