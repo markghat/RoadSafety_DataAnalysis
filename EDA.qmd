@@ -17,6 +17,7 @@ penn_crash
 sum(penn_model_data$Treat == 1)
 ```
 only 331 treated observations compared to 1,655 treated.
+
 ```{r}
 # Visualize relationship for 2008 (pre-treatment state)
 ggplot(penn_crash, aes(x = adt08, y = tot08, color = Treat)) +
@@ -82,7 +83,9 @@ ggplot(rate_long, aes(x = factor(year), y = rate, color = factor(Treat), group =
        color = "Treatment") +
   theme_minimal()
 ```
-# Confounder Analsyis
+Figure X displays average crash rates (crashes per traffic-mile) over time for treated and untreated road segments. Prior to treatment (2004–2008), both groups exhibit similar upward trends, providing visual support for the parallel trends assumption. Following the installation of rumble strips, treated sites experience a substantially larger decline in crash rates compared to untreated sites. This pattern is consistent with a potential beneficial effect of rumble strips. However, consistent with the regression results, this difference is not statistically significant and should be interpreted with caution.
+
+# Confounder Analysis
 ```{r}
 # Check for balance across key categorical variables
 # We use 'pivot_longer' to create a faceted plot of all categorical variables
@@ -100,20 +103,48 @@ penn_crash %>%
 ```
 The proportional bar charts reveal that rumble strip installations were not assigned randomly with respect to site characteristics. Specifically, treatment sites appear disproportionately represented in certain categories—such as higher-speed zones and specific pavement widths—compared to control sites. Because these characteristics (speed, width, shoulder) are independently associated with crash risk, the lack of balance indicates that simple comparisons between the treatment and control groups may be biased by these pre-existing structural differences. Consequently, these variables must be included as covariates in the regression model to isolate the effect of the rumble strips from the influence of road geometry.
 
+
+#_____________________________________________________________________________________________________________________
+
+### Distribution of Crashes
 ```{r}
-# Visualize the distribution of crashes by road characteristics
-penn_crash %>%
-  select(tot12, width, speed, shoulder) %>%
-  pivot_longer(cols = -tot12, names_to = "variable", values_to = "value") %>%
-  ggplot(aes(x = value, y = tot12)) +
-  geom_boxplot(outlier.alpha = 0.3) +
-  facet_wrap(~variable, scales = "free") +
-  labs(title = "Distribution of 2012 Crashes by Road Feature",
-       y = "Total Crashes (2012)", x = "Category") +
+ggplot(penn_model_data, aes(x = tot12)) +
+  geom_histogram(bins = 30) +
+  labs(title = "Distribution of Crash Counts (2012)",
+       x = "Number of Crashes",
+       y = "Frequency") +
   theme_minimal()
 ```
-The exploratory distribution of crash counts (Figure X) exhibited significant right-skewness and overdispersion, characterized by a large proportion of zeros and a long tail of high-crash outliers. This distribution necessitates the use of a Generalized Linear Model (specifically a Negative Binomial regression) rather than OLS, as the latter would fail to account for the discrete nature and overdispersion of the crash counts.
+Right skewed, many zeros
 
-# parallel trends
+### Mean vs Variance
+```{r}
+mean(penn_model_data$tot12)
+var(penn_model_data$tot12)
+```
+variance >> mean
+The variance of crash counts exceeds the mean, indicating overdispersion and motivating the use of a negative binomial model.
+
+```{r}
+binned_data <- penn_model_data %>%
+  mutate(exposure = adt12 * length / 1000,
+         exposure_bin = cut(exposure, breaks = 10)) %>%
+  group_by(exposure_bin) %>%
+  summarise(
+    mean_crashes = mean(tot12, na.rm = TRUE),
+    midpoint = mean(exposure, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(binned_data, aes(x = midpoint, y = mean_crashes)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    x = "Traffic Exposure (thousands)",
+    y = "Average Crashes"
+  ) +
+  theme_minimal()
+```
+Average crash counts increase with traffic exposure, though the relationship is not perfectly linear. Higher exposure bins are associated with higher mean crash counts, supporting the inclusion of an exposure offset.
 
 
