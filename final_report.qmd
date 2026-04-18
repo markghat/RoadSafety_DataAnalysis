@@ -1,0 +1,32 @@
+---
+title: "Analysis of Road Treatment"
+author:
+  - Mark Ghattas
+format:
+  pdf:
+    documentclass: article
+    indent: true
+    geometry:
+      - top=33mm
+      - left=33mm
+      - right=33mm
+      - bottom=33mm
+---
+
+
+
+
+
+## Appendix
+
+```{=tex}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A\arabic{figure}}
+```
+### Appendix A: Exploratory Data Analysis
+Figures were generated using ggplot2 [@R-ggplot2]
+::: {#fig-rotation-attachment}
+![](appendix/eda/rotation_speed_vs_attachment_efficiency.png)
+
+Rotation speed versus attachment efficiency
+:::
