@@ -1,0 +1,86 @@
+---
+title: "EDA"
+format: PDF
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+penn_crash <- read.table("PennCrash.txt", header = TRUE, quote = "\"", sep = "")
+
+penn_crash
+```
+
+```{r}
+# Example: Check the number of treated vs untreated sites
+penn_crash %>% count(Treat)
+
+# Example: Visualize the relationship between traffic volume (adt08) and crashes (tot08)
+ggplot(penn_crash, aes(x = adt08, y = tot08, color = as.factor(Treat))) +
+  geom_point() +
+  labs(title = "Traffic Volume vs. Crashes in 2008",
+       x = "AADT Volume (2008)",
+       y = "Total Crashes (2008)",
+       color = "Rumble Strip Installed")
+```
+
+```{r}
+# 1. Clean the data: Convert treatment to a factor and clean column names if needed
+penn_crash <- penn_crash %>%
+  mutate(Treat = factor(Treat, levels = c(0, 1), labels = c("No Treatment", "Treatment")))
+
+# 2. Reshape to long format for easier plotting
+# This makes it easier to use 'year' as an axis in ggplot
+crash_long <- penn_crash %>%
+  pivot_longer(cols = starts_with("tot"), 
+               names_to = "year", 
+               values_to = "crashes") %>%
+  mutate(year = recode(year, "tot04" = 2004, "tot08" = 2008, "tot12" = 2012))
+
+# 3. Create a boxplot of crashes by year and treatment
+ggplot(crash_long, aes(x = factor(year), y = crashes, fill = Treat)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Crashes by Year and Treatment Status",
+       x = "Year", y = "Total Crashes") +
+  theme_minimal()
+```
+# Trend plot
+```{r}
+# Reshape the data to long format for time-series visualization
+crash_long <- penn_crash %>%
+  pivot_longer(cols = c("tot04", "tot08", "tot12"), 
+               names_to = "year", 
+               values_to = "crashes") %>%
+  mutate(year = recode(year, "tot04" = 2004, "tot08" = 2008, "tot12" = 2012))
+
+# Calculate mean crashes per year for each group
+crash_summary <- crash_long %>%
+  group_by(Treat, year) %>%
+  summarise(mean_crashes = mean(crashes), .groups = 'drop')
+
+# Plot the trend
+ggplot(crash_summary, aes(x = factor(year), y = mean_crashes, color = Treat, group = Treat)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  labs(title = "Mean Crash Counts Over Time",
+       x = "Year", y = "Average Crashes",
+       color = "Group") +
+  theme_minimal()
+```
+
+# Correlation check
+```{r}
+# Visualize relationship for 2008 (pre-treatment state)
+ggplot(penn_crash, aes(x = adt08, y = tot08, color = Treat)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Traffic Volume (2008) vs. Total Crashes (2008)",
+       x = "Annual Average Daily Traffic (2008)", 
+       y = "Total Crashes (2008)") +
+  theme_minimal()
+```
+
+
