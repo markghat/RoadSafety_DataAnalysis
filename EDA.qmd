@@ -109,4 +109,4 @@ penn_crash %>%
        y = "Total Crashes (2012)", x = "Category") +
   theme_minimal()
 ```
-
+The exploratory distribution of crash counts (Figure X) exhibited significant right-skewness and overdispersion, characterized by a large proportion of zeros and a long tail of high-crash outliers. This distribution necessitates the use of a Generalized Linear Model (specifically a Negative Binomial regression) rather than OLS, as the latter would fail to account for the discrete nature and overdispersion of the crash counts.

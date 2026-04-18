@@ -1,0 +1,56 @@
+---
+title: "modeling"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(MASS)
+library(tidyverse)
+```
+
+```{r}
+penn_crash <- read.table("PennCrash.txt", header = TRUE, quote = "\"", sep = "")
+
+penn_crash
+```
+
+# Preparing Data
+```{r}
+# 1. Clean data: Factorize categorical predictors
+penn_model_data <- penn_crash %>%
+  mutate(
+    Treat = factor(Treat),
+    width = factor(width),
+    speed = factor(speed),
+    shoulder = factor(shoulder)
+  )
+
+# 2. Define the offset:
+# In Poisson/Negative Binomial regression, we use log(exposure) as an offset
+# Exposure = Traffic Volume (ADT) * Length of road
+# We add a small constant (or ensure no zeros) to avoid log(0)
+penn_model_data <- penn_model_data %>%
+  mutate(log_exposure = log(adt12 * length + 1))
+```
+
+
+# Building Model
+```{r}
+# 3. Fit the Negative Binomial Regression Model
+model <- glm.nb(tot12 ~ Treat + width + speed + shoulder + offset(log_exposure), 
+                data = penn_model_data)
+
+# 4. View the results
+summary(model)
+```
+
+# Model Diagnostics
+```{r}
+# Check for multicollinearity (ensure your predictors aren't redundant)
+car::vif(model)
+
+# Check residuals to see if the model fit the data well
+plot(model)
+```
+
