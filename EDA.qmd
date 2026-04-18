@@ -13,7 +13,10 @@ penn_crash <- read.table("PennCrash.txt", header = TRUE, quote = "\"", sep = "")
 
 penn_crash
 ```
-
+```{r}
+sum(penn_model_data$Treat == 1)
+```
+only 331 treated observations compared to 1,655 treated.
 ```{r}
 # Visualize relationship for 2008 (pre-treatment state)
 ggplot(penn_crash, aes(x = adt08, y = tot08, color = Treat)) +

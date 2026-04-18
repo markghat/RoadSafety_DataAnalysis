@@ -89,3 +89,21 @@ final_interaction_model <- step(complex_model, direction = "both")
 ```
 
 To thoroughly investigate whether the efficacy of rumble strips was conditional on roadway geometry, we fitted a complex model including all first-order interactions between the treatment indicator and road characteristics (width, speed, shoulder, curvature). We then employed an automated AIC-based stepwise selection procedure to eliminate non-informative predictors. Throughout this iterative process, all interaction terms were discarded due to a lack of statistical significance and negative impacts on model parsimony. Ultimately, the stepwise procedure again identified the treatment indicator itself as redundant. These findings consistently indicate that, within this dataset, rumble strips were not associated with reduced crash frequency, either as a main effect or through conditional interaction with roadway geometry.
+
+```{r}
+# The final selected model
+final_model <- glm.nb(tot12 ~ width + speed + shoulder + curvature + offset(log_exposure), 
+                      data = penn_model_data)
+
+# Summary of the final model
+summary(final_model)
+```
+
+```{r}
+# Plot the residuals
+plot(final_model)
+
+# Alternatively, look at the distribution of Pearson residuals
+plot(residuals(final_model, type = "pearson"), main="Pearson Residuals")
+```
+
