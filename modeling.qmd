@@ -164,10 +164,25 @@ did_model2 <- glm.nb(
 )
 
 summary(did_model2)
+cat("Converged:", did_model2$converged, "\n")
+cat("Fisher scoring iterations:", did_model2$iter, "\n")
+cat("Theta:", did_model2$theta, "\n")
+cat("SE(theta):", did_model2$SE.theta, "\n")
+cat("AIC:", AIC(did_model2), "\n")
 ```
 We estimate a difference-in-differences model using a negative binomial regression to account for overdispersed crash counts. The interaction between treatment status and time captures the causal effect of rumble strip installation. In the baseline DiD model using a single post-treatment indicator, the coefficient on the interaction term (Treat × Post) is -0.168, which corresponds to approximately a 15.5% reduction in crashes (exp(-0.168) ≈ 0.845) for treated road segments relative to untreated segments after installation. However, this effect is not statistically significant (p = 0.198), indicating that the observed reduction could be due to random variation rather than a true treatment effect. Extending the analysis to a more flexible specification with year fixed effects, the estimated coefficient for the treatment effect in 2012 is -0.220, corresponding to approximately a 20% reduction in crashes. However, this effect is not statistically significant (p = 0.141), indicating insufficient evidence to conclude that rumble strips reduce crashes. Importantly, the interaction between treatment status and the pre-treatment year (2008) is also not statistically significant, suggesting no evidence of differential pre-treatment trends between treated and untreated sites and lending support to the parallel trends assumption underlying the DiD approach. Across both models, the estimated treatment effects are consistently negative and of meaningful magnitude, but lack statistical significance. Overall, while the results suggest that rumble strips may reduce crashes, the evidence is not strong enough to draw a definitive causal conclusion.
+
 ## Parallel trends
 To assess the parallel trends assumption, we examine whether treated and untreated road segments exhibited similar trends in crash counts prior to the installation of rumble strips. In the difference-in-differences model with year fixed effects, the interaction between treatment status and the 2008 indicator is not statistically significant (p = 0.49), indicating no evidence of differential pre-treatment trends between the two groups. This suggests that changes in crashes from 2004 to 2008 were comparable across treated and untreated sites. A visual inspection of average crash counts over time further supports this conclusion, as both groups display broadly similar patterns prior to 2012, with no substantial divergence in trends. Together, these findings support the plausibility of the parallel trends assumption underlying the DiD approach.
 
 # model eval
 To evaluate model adequacy, we first assess the suitability of the negative binomial specification. The estimated dispersion parameter indicates the presence of overdispersion in crash counts, supporting the use of a negative binomial model rather than a Poisson alternative. Comparing model fit, the specification with year fixed effects yields a slightly lower AIC than the simpler post-treatment model, suggesting an improved fit and justifying its use for primary interpretation. Most importantly, we examine the validity of the difference-in-differences design through a pre-treatment trend check. The interaction between treatment status and the 2008 indicator is not statistically significant, indicating no evidence of differential pre-treatment trends between treated and untreated road segments. This supports the parallel trends assumption underlying the DiD approach. Additionally, the estimated effects of control variables—such as reduced crashes on wider roads and increased crashes with greater curvature—are consistent with expectations, providing further confidence in the model specification. However, the analysis relies on the assumption that no unobserved, time-varying confounders differentially affect treated and untreated sites, which remains a potential limitation.
+
+```{r}
+AIC(did_model2, did_model)
+```
+
+```{r}
+exp(cbind(Estimate = coef(did_model2)["Treat:year"], confint(did_model2)["Treat:year",]))
+```
+

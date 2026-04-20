@@ -18,42 +18,7 @@ sum(penn_model_data$Treat == 1)
 ```
 only 331 treated observations compared to 1,655 treated.
 
-```{r}
-# Visualize relationship for 2008 (pre-treatment state)
-ggplot(penn_crash, aes(x = adt08, y = tot08, color = Treat)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(title = "Traffic Volume (2008) vs. Total Crashes (2008)",
-       x = "Annual Average Daily Traffic (2008)", 
-       y = "Total Crashes (2008)") +
-  theme_minimal()
-```
-# Trend plot
-```{r}
-# Reshape the data to long format for time-series visualization
-crash_long <- penn_crash %>%
-  pivot_longer(cols = c("tot04", "tot08", "tot12"), 
-               names_to = "year", 
-               values_to = "crashes") %>%
-  mutate(year = recode(year, "tot04" = 2004, "tot08" = 2008, "tot12" = 2012))
-
-# Calculate mean crashes per year for each group
-crash_summary <- crash_long %>%
-  group_by(Treat, year) %>%
-  summarise(mean_crashes = mean(crashes), .groups = 'drop')
-
-# Plot the trend
-ggplot(crash_summary, aes(x = factor(year), y = mean_crashes, color = Treat, group = Treat)) +
-  geom_line(size = 1) +
-  geom_point(size = 3) +
-  labs(title = "Mean Crash Counts Over Time",
-       x = "Year", y = "Average Crashes",
-       color = "Group") +
-  theme_minimal()
-```
-Prior to treatment (2004–2008), the trends are broadly similar, providing visual support for the parallel trends assumption. After 2008, treated sites exhibit a larger decline in crashes compared to untreated sites, suggesting a potential effect of rumble strip installation. However, this visual difference should be interpreted cautiously, as it does not account for differences in traffic exposure or roadway characteristics. We must consult regression results to see if the estimated treatment effect is not statistically significant.
-
-# Crash Rates
+# Crash Rate Trend Plot
 ```{r}
 # 1. Calculate yearly rates
 penn_crash <- penn_crash %>%
@@ -125,6 +90,7 @@ var(penn_model_data$tot12)
 variance >> mean
 The variance of crash counts exceeds the mean, indicating overdispersion and motivating the use of a negative binomial model.
 
+### Traffic Exposure Trends
 ```{r}
 binned_data <- penn_model_data %>%
   mutate(exposure = adt12 * length / 1000,
@@ -140,11 +106,14 @@ ggplot(binned_data, aes(x = midpoint, y = mean_crashes)) +
   geom_point() +
   geom_line() +
   labs(
+    title = "Average Crash Counts Increase with Traffic Exposure",
     x = "Traffic Exposure (thousands)",
     y = "Average Crashes"
   ) +
   theme_minimal()
 ```
 Average crash counts increase with traffic exposure, though the relationship is not perfectly linear. Higher exposure bins are associated with higher mean crash counts, supporting the inclusion of an exposure offset.
+
+
 
 
