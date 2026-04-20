@@ -137,22 +137,29 @@ AIC(did_model2, did_model)
 ```
 
 ```{r}
-exp(cbind(Estimate = coef(did_model2)["Treat:year"], confint(did_model2)["Treat:year",]))
+exp(cbind(
+  Estimate = coef(did_model2)[c("Treat1:year08", "Treat1:year12")],
+  confint(did_model2)[c("Treat1:year08", "Treat1:year12"), ]
+))
 ```
 
 ```{r}
 coef_data <- broom::tidy(did_model2) %>%
   filter(term != "(Intercept)") %>%
-  mutate(term = reorder(term, estimate))
-
-ggplot(coef_data, aes(x = estimate, y = term)) +
+  mutate(
+    estimate_exp = exp(estimate),
+    lower = exp(estimate - 1.96 * std.error),
+    upper = exp(estimate + 1.96 * std.error),
+    term = reorder(term, estimate_exp)
+  )
+ggplot(coef_data, aes(x = estimate_exp, y = term)) +
   geom_point() +
-  geom_errorbarh(aes(xmin = estimate - 1.96 * std.error,
-                     xmax = estimate + 1.96 * std.error),
+  geom_errorbarh(aes(xmin = lower, xmax = upper),
                  height = 0.2) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
   labs(
-    title = "Estimated Effects of Roadway Characteristics on Crash Counts",
-    x = "Coefficient (log scale)",
+    title = "Estimated Effects on Crash Rates (Rate Ratios)",
+    x = "Rate Ratio (Multiplicative Effect on Crash Rate)",
     y = ""
   ) +
   theme_minimal()
