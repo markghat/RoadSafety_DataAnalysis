@@ -55,32 +55,7 @@ car::vif(init_model)
 # Check residuals to see if the model fit the data well
 plot(init_model)
 ```
-# stepwise selection
-```{r}
-# 1. Define the full model with all relevant predictors
-# We exclude 'driveways' and 'intersections' if they have too many NAs
-# and focus on the structural predictors identified in your assignment.
-full_model <- glm.nb(tot12 ~ Treat + width + speed + shoulder + curvature + 
-                     offset(log_exposure), 
-                     data = penn_model_data)
-
-# 2. Run AIC-based stepwise selection
-stepwise_model <- step(full_model, direction = "both")
-
-# 3. View the final, optimized model
-summary(stepwise_model)
-```
-Our initial multivariate Negative Binomial model showed no statistically significant relationship between rumble strip installation and crash frequency (p=0.48). Subsequent AIC-based stepwise selection confirmed this finding, as the removal of the treatment variable resulted in a more parsimonious model (lower AIC). Instead, roadway geometry variables—specifically pavement width, shoulder width, and horizontal curvature—emerged as the primary drivers of crash outcomes. These results suggest that in the context of the Pennsylvania road segments studied, structural roadway improvements may have a greater impact on safety than the installation of rumble strips.
-
-# Testing Interactions
-
-```{r}
-interaction_model <- glm.nb(tot12 ~ Treat * curvature + width + speed + shoulder + offset(log_exposure), 
-                            data = penn_model_data)
-
-summary(interaction_model)
-```
-
+# AIC stepwise selection
 ```{r}
 # Create a model with all possible interactions between Treat and covariates
 complex_model <- glm.nb(tot12 ~ Treat * (width + speed + shoulder + curvature) + offset(log_exposure), 
@@ -92,6 +67,7 @@ final_interaction_model <- step(complex_model, direction = "both")
 
 To thoroughly investigate whether the efficacy of rumble strips was conditional on roadway geometry, we fitted a complex model including all first-order interactions between the treatment indicator and road characteristics (width, speed, shoulder, curvature). We then employed an automated AIC-based stepwise selection procedure to eliminate non-informative predictors. Throughout this iterative process, all interaction terms were discarded due to a lack of statistical significance and negative impacts on model parsimony. Ultimately, the stepwise procedure again identified the treatment indicator itself as redundant. These findings consistently indicate that, within this dataset, rumble strips were not associated with reduced crash frequency, either as a main effect or through conditional interaction with roadway geometry.
 
+### Selected Prediction Model
 ```{r}
 # The final selected model
 final_model <- glm.nb(tot12 ~ width + speed + shoulder + curvature + offset(log_exposure), 
@@ -99,28 +75,6 @@ final_model <- glm.nb(tot12 ~ width + speed + shoulder + curvature + offset(log_
 
 # Summary of the final model
 summary(final_model)
-```
-
-```{r}
-# Plot the residuals
-plot(final_model)
-
-# Alternatively, look at the distribution of Pearson residuals
-plot(residuals(final_model, type = "pearson"), main="Pearson Residuals")
-```
-
-# Evaluation
-```{r}
-# Calculate IRR and 95% Confidence Intervals
-final_results <- exp(cbind(Estimate = coef(final_model), confint(final_model)))
-print(final_results)
-```
-
-
-```{r}
-# Compare Final Model to Null Model
-null_model <- glm.nb(tot12 ~ 1 + offset(log_exposure), data = penn_model_data)
-anova(null_model, final_model)
 ```
 
 #DiD model
@@ -184,5 +138,23 @@ AIC(did_model2, did_model)
 
 ```{r}
 exp(cbind(Estimate = coef(did_model2)["Treat:year"], confint(did_model2)["Treat:year",]))
+```
+
+```{r}
+coef_data <- broom::tidy(did_model2) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(term = reorder(term, estimate))
+
+ggplot(coef_data, aes(x = estimate, y = term)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = estimate - 1.96 * std.error,
+                     xmax = estimate + 1.96 * std.error),
+                 height = 0.2) +
+  labs(
+    title = "Estimated Effects of Roadway Characteristics on Crash Counts",
+    x = "Coefficient (log scale)",
+    y = ""
+  ) +
+  theme_minimal()
 ```
 
