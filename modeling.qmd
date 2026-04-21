@@ -130,7 +130,7 @@ We estimate a difference-in-differences model using a negative binomial regressi
 To assess the parallel trends assumption, we examine whether treated and untreated road segments exhibited similar trends in crash counts prior to the installation of rumble strips. In the difference-in-differences model with year fixed effects, the interaction between treatment status and the 2008 indicator is not statistically significant (p = 0.49), indicating no evidence of differential pre-treatment trends between the two groups. This suggests that changes in crashes from 2004 to 2008 were comparable across treated and untreated sites. A visual inspection of average crash counts over time further supports this conclusion, as both groups display broadly similar patterns prior to 2012, with no substantial divergence in trends. Together, these findings support the plausibility of the parallel trends assumption underlying the DiD approach.
 
 # model eval
-To evaluate model adequacy, we first assess the suitability of the negative binomial specification. The estimated dispersion parameter indicates the presence of overdispersion in crash counts, supporting the use of a negative binomial model rather than a Poisson alternative. Comparing model fit, the specification with year fixed effects yields a slightly lower AIC than the simpler post-treatment model, suggesting an improved fit and justifying its use for primary interpretation. Most importantly, we examine the validity of the difference-in-differences design through a pre-treatment trend check. The interaction between treatment status and the 2008 indicator is not statistically significant, indicating no evidence of differential pre-treatment trends between treated and untreated road segments. This supports the parallel trends assumption underlying the DiD approach. Additionally, the estimated effects of control variables—such as reduced crashes on wider roads and increased crashes with greater curvature—are consistent with expectations, providing further confidence in the model specification. However, the analysis relies on the assumption that no unobserved, time-varying confounders differentially affect treated and untreated sites, which remains a potential limitation.
+Most importantly, we examine the validity of the difference-in-differences design through a pre-treatment trend check. The interaction between treatment status and the 2008 indicator is not statistically significant, indicating no evidence of differential pre-treatment trends between treated and untreated road segments. This supports the parallel trends assumption underlying the DiD approach. Additionally, the estimated effects of control variables—such as reduced crashes on wider roads and increased crashes with greater curvature—are consistent with expectations, providing further confidence in the model specification.
 
 ```{r}
 AIC(did_model2, did_model)
@@ -142,7 +142,7 @@ exp(cbind(
   confint(did_model2)[c("Treat1:year08", "Treat1:year12"), ]
 ))
 ```
-
+# Results
 ```{r}
 coef_data <- broom::tidy(did_model2) %>%
   filter(term != "(Intercept)") %>%
@@ -165,3 +165,63 @@ ggplot(coef_data, aes(x = estimate_exp, y = term)) +
   theme_minimal()
 ```
 
+# Sensitivity Analysis
+```{r}
+# Sensitivity Analysis
+library(MASS)
+
+# 1. Define the controls exactly as they appear in the model
+controls <- c("width", "speed", "shoulder", "curvature")
+
+# 2. Create a data frame to store results
+sensitivity_results <- data.frame(
+  dropped_var = c("None", controls),
+  est_rate_ratio = NA,
+  lower_ci = NA,
+  upper_ci = NA
+)
+
+# 3. Helper to extract the treatment effect for 2012
+get_results <- function(model) {
+  term_name <- "Treat1:year12"
+  
+  # Check that the expected coefficient exists
+  if (!(term_name %in% names(coef(model)))) {
+    stop(paste("Coefficient", term_name, "not found. Available terms are:",
+               paste(names(coef(model)), collapse = ", ")))
+  }
+  
+  rate_ratio <- exp(coef(model)[term_name])
+  conf_int <- exp(confint(model)[term_name, ])
+  
+  return(c(rate_ratio, conf_int))
+}
+
+# 4. Store the original model results
+sensitivity_results[1, 2:4] <- get_results(did_model2)
+
+# 5. Loop to drop one control variable at a time
+for (i in seq_along(controls)) {
+  vars_to_keep <- controls[controls != controls[i]]
+  
+  formula_str <- as.formula(
+    paste(
+      "tot ~ Treat * year +",
+      paste(vars_to_keep, collapse = " + "),
+      "+ offset(log(adt * length))"
+    )
+  )
+  
+  # Re-fit the model
+  temp_model <- glm.nb(formula_str, data = long_data)
+  
+  # Store results
+  sensitivity_results[i + 1, 2:4] <- get_results(temp_model)
+}
+
+# 6. View the final table
+print(sensitivity_results)
+```
+The estimated treatment effect is extremely stable across model specifications.
+
+A sensitivity analysis was conducted by re-estimating the model while sequentially excluding each control variable. The estimated treatment effect remains highly stable across all specifications, with rate ratios consistently near 0.80 and nearly identical confidence intervals. This indicates that the estimated effect of rumble strip installation is not driven by any single control variable and provides additional support for the robustness of the model specification.
